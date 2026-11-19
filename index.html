@@ -293,7 +293,7 @@ option{background:var(--surface-solid);color:var(--ink)}
 
     <section class="card" data-v="settings"><div class="chead"><h3>Settings</h3></div>
       <div class="set"><div><b>Theme</b><span>Choose light, dark, or follow your device.</span></div><div class="seg" id="segTheme"><button data-t="system">System</button><button data-t="light">Light</button><button data-t="dark">Dark</button></div></div>
-      <div class="set"><div><b>Sparkle cursor</b><span>Gold sparkles follow your mouse. Always off on touch screens and reduced-motion devices.</span></div><div class="seg" id="segSpark"><button data-s="1">On</button><button data-s="0">Off</button></div></div>
+      <div class="set"><div><b>Sparkle cursor</b><span>Gold sparkles follow mouse movement and finger touch on mobile. Respects reduced-motion settings.</span></div><div class="seg" id="segSpark"><button data-s="1">On</button><button data-s="0">Off</button></div></div>
       <div class="set"><div><b>Data</b><span>Switch back to the 50 dummy orders or get the sample file.</span></div><div class="filters"><button class="btn pri" id="sLoad">Load Dummy Data</button><button class="btn" id="sSample">Download Sample CSV</button></div></div>
     </section>
   </main>
@@ -594,8 +594,25 @@ const Sparkle=(()=>{
     for(const p of P){p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.vx*=.985;p.life-=p.dec;p.rot+=p.vr;if(p.life<=0)continue;x.fillStyle='rgba('+p.col+','+(p.life*.95)+')';x.shadowColor='rgba('+p.col+',.9)';x.shadowBlur=8;star(p.x,p.y,p.r*(.4+.6*p.life),p.rot)}
     x.shadowBlur=0;P=P.filter(p=>p.life>0);if(P.length||t-lastMove<500)raf=requestAnimationFrame(frame)}
   function start(){if(!raf)raf=requestAnimationFrame(frame)}
-  addEventListener('pointermove',e=>{if(!on||reduce()||e.pointerType==='touch')return;mx=e.clientX;my=e.clientY;lastMove=performance.now();const d=Math.hypot(mx-lx,my-ly);if(d>9){add(mx,my,d>40?2:1);lx=mx;ly=my}start()},{passive:true});
-  addEventListener('pointerdown',e=>{if(!on||reduce()||e.pointerType==='touch')return;mx=e.clientX;my=e.clientY;lastMove=performance.now();add(mx,my,14,true)},{passive:true});
+  // Pointer events cover mouse, pen and modern mobile touch input.
+  // Touch uses a lighter trail so it remains smooth while scrolling.
+  addEventListener('pointermove',e=>{
+    if(!on||reduce())return;
+    mx=e.clientX;my=e.clientY;lastMove=performance.now();
+    const d=Math.hypot(mx-lx,my-ly);
+    if(d>(e.pointerType==='touch'?12:9)){
+      add(mx,my,e.pointerType==='touch'?1:(d>40?2:1),false);
+      lx=mx;ly=my;
+    }
+    start();
+  },{passive:true});
+  addEventListener('pointerdown',e=>{
+    if(!on||reduce())return;
+    mx=e.clientX;my=e.clientY;lastMove=performance.now();
+    add(mx,my,e.pointerType==='touch'?9:14,true);
+  },{passive:true});
+  addEventListener('pointerup',()=>{lx=-999;ly=-999},{passive:true});
+  addEventListener('pointercancel',()=>{lx=-999;ly=-999},{passive:true});
   addEventListener('resize',size);size();
   return {set(v){on=v;if(!v){P=[];x.clearRect(0,0,W,H)}}};
 })();
